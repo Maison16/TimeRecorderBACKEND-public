@@ -1,0 +1,6 @@
+@TimeRecorderBACKEND_HostAddress = http://localhost:5028
+
+GET {{TimeRecorderBACKEND_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
