@@ -414,7 +414,7 @@ Examples:
             case "end":
                 try
                 {
-                    IEnumerable<WorkLogDtoWithUserNameAndSurname> workLogs = await workLogService.GetSpecific(userId, WorkLogType.Work, false);
+                    IEnumerable<WorkLogDtoWithUserNameAndSurname> workLogs = await workLogService.GetSpecific(userId, null, false);
                     WorkLogDtoWithUserNameAndSurname? lastWorkLog = workLogs.OrderByDescending(w => w.StartTime).FirstOrDefault();
                     if (lastWorkLog == null)
                         return "There is no active worklog to end.";

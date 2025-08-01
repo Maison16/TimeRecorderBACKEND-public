@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Security.Claims;
 using TimeRecorderBACKEND.Dtos;
+using TimeRecorderBACKEND.Models;
 using TimeRecorderBACKEND.Services;
 
 namespace TimeRecorderBACKEND.Controllers
@@ -136,6 +137,22 @@ namespace TimeRecorderBACKEND.Controllers
                 return NotFound("Project not found for the user");
             }
             return Ok(project);
+        }
+
+        /// <summary>
+        /// Gets all users with their associated projects. Only accessible by Admins.
+        /// </summary>
+        /// <returns>List of users with project details.</returns>
+        [HttpGet("with-projects")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<UserDtoWithProject>>> GetAllWithProjects(
+            [FromQuery] int? pageNumber = null,
+            [FromQuery] int? pageSize = null,
+            [FromQuery] string? search = null,
+            [FromQuery] bool onlyWithoutProject = false)
+        {
+            IEnumerable<UserDtoWithProject> usersWithProjects = await _userService.GetAllUsersWithProjectsAsync(pageNumber, pageSize, search, onlyWithoutProject);
+            return Ok(usersWithProjects);
         }
     }
 }

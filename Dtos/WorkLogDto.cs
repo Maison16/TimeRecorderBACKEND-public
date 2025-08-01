@@ -10,6 +10,7 @@ namespace TimeRecorderBACKEND.Dtos
         public DateTime? EndTime { get; set; }
         public WorkLogType Type { get; set; }
         public Guid UserId { get; set; }
+        public DateTime CreatedAt { get; set; }
         public int? Duration{ get; set; }
         public string? UserName { get; set; }
         public string? UserSurname { get; set; }

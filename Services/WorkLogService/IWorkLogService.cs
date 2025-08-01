@@ -16,6 +16,17 @@ namespace TimeRecorderBACKEND.Services
             string? lastName = null,
             int? pageNumber = null,
             int? pageSize = null);
+
+        Task<IEnumerable<WorkLogDtoWithUserNameAndSurname>> GetSpecificForUsers(
+            List<Guid>? userIds = null,
+            WorkLogType? type = null,
+            bool? isClose = null,
+            bool? isDeleted = false,
+            DateTime? startDay = null,
+            string? firstName = null,
+            string? lastName = null,
+            int? pageNumber = null,
+            int? pageSize = null);
         Task<WorkLogDto> StartWorkLogAsync(Guid userId, WorkLogType type);
         Task<WorkLogDto?> UpdateAsync(int id, WorkLogDto dto);
         Task<WorkLogDto?> EndWorkLogAsync(int id);
@@ -29,5 +40,7 @@ namespace TimeRecorderBACKEND.Services
         Task<List<Guid>> GetUsersWithUnfinishedWorkTodayAsync(int maxWorkHours);
         Task<List<Guid>> GetUsersWithLongActiveBreakAsync(int maxBreakTime);
         Task<WorkLogDto> CreatePastWorkLogAsync(Guid userId, WorkLogType type, DateTime startTime);
+        Task<WorkLogDto?> ConfirmPastWorkLogAsync(int workLogId);
+        Task<WorkLogDto?> RejectPastWorkLogAsync(int workLogId);
     }
 }

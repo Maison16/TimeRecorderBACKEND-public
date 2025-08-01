@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using TimeRecorderBACKEND.Dtos;
+using TimeRecorderBACKEND.Models;
 
 namespace TimeRecorderBACKEND.Services
 {
@@ -12,5 +13,10 @@ namespace TimeRecorderBACKEND.Services
         Task<bool> AssignProjectAsync(Guid userId, int projectId);
         Task<bool> UnassignProjectAsync(Guid userId);
         Task<ProjectDto?> GetUserProjectAsync(Guid userId);
+        Task<IEnumerable<UserDtoWithProject>> GetAllUsersWithProjectsAsync(
+            int? pageNumber = null,
+            int? pageSize = null,
+            string? search = null,
+            bool onlyWithoutProject = false);
     }
 }

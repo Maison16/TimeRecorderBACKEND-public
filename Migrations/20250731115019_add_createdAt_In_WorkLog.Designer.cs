@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TimeRecorderBACKEND.DataBaseContext;
 
@@ -11,9 +12,11 @@ using TimeRecorderBACKEND.DataBaseContext;
 namespace TimeRecorderBACKEND.Migrations
 {
     [DbContext(typeof(WorkTimeDbContext))]
-    partial class WorkTimeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250731115019_add_createdAt_In_WorkLog")]
+    partial class add_createdAt_In_WorkLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using TimeRecorderBACKEND.Dtos;
+using TimeRecorderBACKEND.Models;
 using TimeRecorderBACKEND.Services;
 
 namespace TimeRecorderBACKEND.Controllers
@@ -53,18 +54,40 @@ namespace TimeRecorderBACKEND.Controllers
         {
             DateTime start = from ?? DateTime.Today;
             DateTime end = to ?? DateTime.Today;
-            List<SummaryDto> summaries = await _summaryService.GetFullSummaryForAllAsync(start, end);
+
+            // Fixing CS1503: Convert nullable DateTime to non-nullable DateTime
+            SummaryListDto result = await _summaryService.GetDailySummariesAsync(start, end);
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("User,WorkMinutes,BreakMinutes,BreakCount,ApprovedDaysOff");
+            sb.AppendLine("Name,Surname,Email,Date,WorkMinutes,BreakMinutes,BreakCount");
 
-            foreach (var summary in summaries)
+            // Assuming summaries should be result.Summaries
+            foreach (SummaryDto summary in result.Summaries)
             {
-                sb.AppendLine($"{summary.UserName} {summary.UserSurname},{summary.TotalWorkTimeMinutes},{summary.TotalBreakTimeMinutes},{summary.BreakCount}, {summary.ApprovedDaysOff}");
+                sb.AppendLine($"{summary.UserName},{summary.UserSurname},{summary.UserEmail},{summary.Date:yyyy-MM-dd},{summary.TotalWorkTimeMinutes},{summary.TotalBreakTimeMinutes},{summary.BreakCount}");
             }
 
             byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             return File(bytes, "text/csv", $"summary_{start:yyyyMMdd}_{end:yyyyMMdd}.csv");
+        }
+
+        /// <summary>
+        /// Gets daily summaries for a user or project within a specified date range.
+        /// </summary>
+        /// <param name="dateFrom">Start date for the summaries.</param>
+        /// <param name="dateTo">End date for the summaries.</param>
+        /// <param name="usersId">Usesr ID to filter by (optional). If not typed select all users</param>
+        /// <param name="projectId">Project ID to filter by (optional).</param>
+        /// <returns>A list of daily summaries for the specified criteria.</returns>
+        [HttpGet("daily")]
+        public async Task<ActionResult<SummaryListDto>> GetDailySummaries(
+            [FromQuery] DateTime dateFrom,
+            [FromQuery] DateTime dateTo,
+            [FromQuery] List<Guid>? usersId = null,
+            [FromQuery] int? projectId = null)
+        {
+            SummaryListDto result = await _summaryService.GetDailySummariesAsync(dateFrom, dateTo, usersId, projectId);
+            return Ok(result);
         }
     }
 }
