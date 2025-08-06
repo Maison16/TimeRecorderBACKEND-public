@@ -99,6 +99,85 @@ namespace TimeRecorderBACKEND.Services
                     Type = w.Type,
                     UserId = w.UserId,
                     Duration = w.Duration ?? 0,
+                    CreatedAt = w.CreatedAt,
+                    UserName = w.User != null ? w.User.Name : null,
+                    UserSurname = w.User != null ? w.User.Surname : null
+                })
+                .ToListAsync();
+        }
+        public async Task<IEnumerable<WorkLogDtoWithUserNameAndSurname>> GetSpecificForUsers(
+    List<Guid>? userIds = null,
+    WorkLogType? type = null,
+    bool? isClose = null,
+    bool? isDeleted = false,
+    DateTime? startDay = null,
+    string? firstName = null,
+    string? lastName = null,
+    int? pageNumber = null,
+    int? pageSize = null)
+        {
+            IQueryable<WorkLog> query;
+
+            if (isDeleted == true)
+            {
+                query = _context.WorkLogs
+                    .Where(x => x.ExistenceStatus == ExistenceStatus.Deleted)
+                    .Include(x => x.User);
+            }
+            else
+            {
+                query = _context.WorkLogs
+                    .Where(x => x.ExistenceStatus == ExistenceStatus.Exist)
+                    .Include(x => x.User);
+            }
+
+            if (userIds != null && userIds.Any())
+            {
+                query = query.Where(w => userIds.Contains(w.UserId));
+            }
+            if (type != null)
+            {
+                query = query.Where(w => w.Type == type.Value);
+            }
+            if (isClose != null)
+            {
+                query = isClose.Value
+                    ? query.Where(w => w.EndTime != null)
+                    : query.Where(w => w.EndTime == null);
+            }
+            if (startDay != null)
+            {
+                query = query.Where(w => w.StartTime.Date == startDay.Value.Date);
+            }
+            if (!string.IsNullOrWhiteSpace(firstName))
+            {
+                query = query.Where(w => w.User.Name.Contains(firstName));
+            }
+            if (!string.IsNullOrWhiteSpace(lastName))
+            {
+                query = query.Where(w => w.User.Surname.Contains(lastName));
+            }
+
+            query = query.OrderByDescending(w => w.StartTime);
+
+            if (pageNumber.HasValue && pageSize.HasValue)
+            {
+                query = query
+                    .Skip((pageNumber.Value - 1) * pageSize.Value)
+                    .Take(pageSize.Value);
+            }
+
+            return await query
+                .Select(w => new WorkLogDtoWithUserNameAndSurname
+                {
+                    Id = w.Id,
+                    Status = w.Status,
+                    StartTime = w.StartTime,
+                    EndTime = w.EndTime,
+                    Type = w.Type,
+                    UserId = w.UserId,
+                    Duration = w.Duration ?? 0,
+                    CreatedAt = w.CreatedAt,
                     UserName = w.User != null ? w.User.Name : null,
                     UserSurname = w.User != null ? w.User.Surname : null
                 })
@@ -213,7 +292,7 @@ namespace TimeRecorderBACKEND.Services
         }
         public async Task<WorkLogDto?> EndWorkLogAsync(int id)
         {
-            WorkLog? workLog = await _context.WorkLogs.FirstOrDefaultAsync(w => w.Id == id);
+            WorkLog? workLog = await _context.WorkLogs.FirstOrDefaultAsync(w => w.Id == id && w.ExistenceStatus==ExistenceStatus.Exist);
             if (workLog == null)
             {
                 return null;
@@ -241,7 +320,10 @@ namespace TimeRecorderBACKEND.Services
             }
 
             workLog.EndTime = DateTime.Now;
-            workLog.Status = WorkLogStatus.Finished;
+            if (workLog.Status == WorkLogStatus.Started)
+            {
+                workLog.Status = WorkLogStatus.Finished;
+            }
             await _context.SaveChangesAsync();
             await _hubContext.Clients.User(workLog.UserId.ToString()).SendAsync("WorkStatusChanged", new
             {
@@ -363,6 +445,7 @@ namespace TimeRecorderBACKEND.Services
                 EndTime = w.EndTime,
                 Type = w.Type,
                 UserId = w.UserId,
+                CreatedAt = w.CreatedAt,
                 Duration = w.Duration ?? 0
             };
         }
@@ -380,6 +463,7 @@ namespace TimeRecorderBACKEND.Services
                 w.UserId == userId &&
                 w.Type == WorkLogType.Break &&
                 w.EndTime == null &&
+                w.ExistenceStatus == ExistenceStatus.Exist &&
                 w.Id != currentBreakId);
         }
 
@@ -476,7 +560,6 @@ namespace TimeRecorderBACKEND.Services
         {
             DateTime today = DateTime.Today;
 
-            // Pobierz wszystkie WorkLogi typu Work z dzisiaj (niezale¿nie od statusu zamkniêcia)
             List<WorkLog> workLogs = await _context.WorkLogs
                 .Where(w => w.Type == WorkLogType.Work
                     && w.StartTime.Date == today
@@ -583,7 +666,8 @@ namespace TimeRecorderBACKEND.Services
             {
                 UserId = userId,
                 StartTime = startTime,
-                Type = type
+                Type = type,
+                Status = WorkLogStatus.RequiresAttention
             };
 
             _context.WorkLogs.Add(workLog);
@@ -597,6 +681,34 @@ $"User's {(workLog.Type == WorkLogType.Work ? "Work" : "Break")} with email {use
                 userId,
                 status = type == WorkLogType.Work ? "work_started" : "break_started"
             });
+            return ToDto(workLog);
+        }
+
+        public async Task<WorkLogDto?> ConfirmPastWorkLogAsync(int workLogId)
+        {
+            WorkLog? workLog = await _context.WorkLogs.FirstOrDefaultAsync(w => w.Id == workLogId && w.Status == WorkLogStatus.RequiresAttention);
+            if (workLog == null)
+            {
+                return null;
+            }
+
+            workLog.Status = WorkLogStatus.Finished;
+            workLog.EndTime = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return ToDto(workLog);
+        }
+        public async Task<WorkLogDto?> RejectPastWorkLogAsync(int workLogId)
+        {
+            WorkLog? workLog = await _context.WorkLogs.FirstOrDefaultAsync(w => w.Id == workLogId && w.Status == WorkLogStatus.RequiresAttention);
+            if (workLog == null)
+            {
+                return null;
+            }
+
+            workLog.Status = WorkLogStatus.Finished;
+            workLog.StartTime = workLog.CreatedAt;
+            workLog.EndTime = DateTime.Now;
+            await _context.SaveChangesAsync();
             return ToDto(workLog);
         }
     }

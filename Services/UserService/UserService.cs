@@ -249,6 +249,62 @@ namespace TimeRecorderBACKEND.Services
             };
         }
 
+        public async Task<IEnumerable<UserDtoWithProject>> GetAllUsersWithProjectsAsync(
+    int? pageNumber = null,
+    int? pageSize = null,
+    string? search = null,
+    bool onlyWithoutProject = false)
+{
+    IQueryable<Models.User> query = _context.Users
+        .Include(u => u.Project)
+        .Where(u => u.ExistenceStatus == ExistenceStatus.Exist);
+
+    if (onlyWithoutProject)
+    {
+        query = query.Where(u => u.Project == null);
+    }
+
+    if (!string.IsNullOrWhiteSpace(search) && search.Length >= 3)
+    {
+        string lowered = search.ToLower();
+        query = query.Where(u =>
+            u.Name.ToLower().Contains(lowered) ||
+            u.Surname.ToLower().Contains(lowered) ||
+            u.Email.ToLower().Contains(lowered));
+    }
+
+    if (pageNumber.HasValue && pageSize.HasValue)
+    {
+        query = query
+            .Skip((pageNumber.Value - 1) * pageSize.Value)
+            .Take(pageSize.Value);
+    }
+
+    List<Models.User> users = await query.ToListAsync();
+
+    List<UserDtoWithProject> result = users.Select(u => new UserDtoWithProject
+    {
+        Id = u.Id,
+        Name = u.Name,
+        Surname = u.Surname,
+        Email = u.Email,
+        Project = u.Project == null ? null : new ProjectDto
+        {
+            Id = u.Project.Id,
+            Name = u.Project.Name,
+            Description = u.Project.Description
+        }
+    }).ToList();
+
+    return result;
+}
+        public async Task<IEnumerable<UserDto>> GetUsersByProjectAsync(int projectId)
+        {
+            List<Models.User> users = await _context.Users
+                    .Where(u => u.ProjectId == projectId && u.ExistenceStatus == ExistenceStatus.Exist)
+                    .ToListAsync();
+            return users.Select(ToDto).ToList();
+        }
         private static UserDto ToDto(Models.User user)
         {
             return new UserDto

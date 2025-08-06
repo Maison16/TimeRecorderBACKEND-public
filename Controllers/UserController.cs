@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Security.Claims;
 using TimeRecorderBACKEND.Dtos;
+using TimeRecorderBACKEND.Models;
 using TimeRecorderBACKEND.Services;
 
 namespace TimeRecorderBACKEND.Controllers
@@ -137,6 +138,33 @@ namespace TimeRecorderBACKEND.Controllers
             }
             return Ok(project);
         }
+
+        /// <summary>
+        /// Gets all users with their associated projects. Only accessible by Admins.
+        /// </summary>
+        /// <returns>List of users with project details.</returns>
+        [HttpGet("with-projects")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<UserDtoWithProject>>> GetAllWithProjects(
+            [FromQuery] int? pageNumber = null,
+            [FromQuery] int? pageSize = null,
+            [FromQuery] string? search = null,
+            [FromQuery] bool onlyWithoutProject = false)
+        {
+            IEnumerable<UserDtoWithProject> usersWithProjects = await _userService.GetAllUsersWithProjectsAsync(pageNumber, pageSize, search, onlyWithoutProject);
+            return Ok(usersWithProjects);
+        }
+        /// <summary>
+        /// Gets all users assigned to a specific project.
+        /// </summary>
+        /// <param name="projectId">Project ID.</param>
+        /// <returns>List of users assigned to the project.</returns>
+        [HttpGet("by-project/{projectId:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersByProject(int projectId)
+        {
+            IEnumerable<UserDto> users = await _userService.GetUsersByProjectAsync(projectId);
+            return Ok(users);
+        }
     }
 }
-// http://localhost:5028

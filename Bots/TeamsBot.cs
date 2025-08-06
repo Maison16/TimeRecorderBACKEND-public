@@ -24,18 +24,29 @@ public class TeamsBot : TeamsActivityHandler
     private readonly IServiceProvider _serviceProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
+    private readonly string timeRegisterChannelId;
 
     public TeamsBot(IServiceProvider serviceProvider, IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        timeRegisterChannelId = _configuration["Teams:ChannelId"] ?? throw new InvalidOperationException("Teams:ChannelId is missing in configuration.");
     }
 
     protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
     {
-        string userMessage = turnContext.Activity.Text?.Trim().ToLower();
+        Console.WriteLine($" Recive msg: Text='{turnContext.Activity.Text}', Type={turnContext.Activity.Conversation.ConversationType}, Channel={turnContext.Activity.ChannelId}, From={turnContext.Activity.From?.Name}, AadObjectId={turnContext.Activity.From?.AadObjectId}");
 
+        string userMessage = turnContext.Activity.Text?.Trim().ToLower();
+        var channelData = turnContext.Activity.GetChannelData<Microsoft.Bot.Schema.Teams.TeamsChannelData>();
+        string? actualChannelId = channelData?.Channel?.Id;
+
+        if (actualChannelId != timeRegisterChannelId)
+        {
+            Console.WriteLine($"Msg from diffrent channel {actualChannelId}");
+            return;
+        }
         if (turnContext.Activity.Value is not null)
         {
             string confirmation = null;
@@ -414,7 +425,7 @@ Examples:
             case "end":
                 try
                 {
-                    IEnumerable<WorkLogDtoWithUserNameAndSurname> workLogs = await workLogService.GetSpecific(userId, WorkLogType.Work, false);
+                    IEnumerable<WorkLogDtoWithUserNameAndSurname> workLogs = await workLogService.GetSpecific(userId, null, false);
                     WorkLogDtoWithUserNameAndSurname? lastWorkLog = workLogs.OrderByDescending(w => w.StartTime).FirstOrDefault();
                     if (lastWorkLog == null)
                         return "There is no active worklog to end.";

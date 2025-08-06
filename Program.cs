@@ -103,7 +103,7 @@ internal class Program
         {
             options.AddPolicy("AllowFrontend", policy =>
             {
-                policy.WithOrigins("http://localhost:5173", "https://deep-huge-pika.ngrok-free.app", "https://localhost:7023", "https://localhost:5173")
+                policy.WithOrigins("http://localhost:5173", "https://deep-huge-pika.ngrok-free.app", "https://localhost:7023", "https://localhost:5173", "https://yellow-moss-04f827803.2.azurestaticapps.net")
                       .AllowCredentials()
                       .AllowAnyMethod()
                       .AllowAnyHeader();
@@ -163,6 +163,7 @@ internal class Program
         builder.Services.AddHostedService<WorkLogBackgroundService>();
         builder.Services.AddHostedService<DayOffBackgroundService>();
         builder.Services.AddHostedService<TeamsProactiveThreadService>();
+        builder.Services.AddHostedService<TeamsPresenceBackgroundService>();
         string? emailFrom = builder.Configuration["Email:From"];
         string? emailPassword = builder.Configuration["Email:Password"];
         if (string.IsNullOrWhiteSpace(emailFrom) || string.IsNullOrWhiteSpace(emailPassword))
@@ -225,7 +226,7 @@ internal class Program
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "TimeRecorder API V1");
                 c.OAuthClientId(builder.Configuration["AzureAd:SwaggerId"]);
-                c.OAuthUsePkce(); 
+                c.OAuthUsePkce();
                 c.OAuthAdditionalQueryStringParams(new Dictionary<string, string> { { "prompt", "select_account" } });
             });
         }
@@ -281,17 +282,25 @@ internal class Program
                 dbContext.Settings.Add(new Settings());
                 dbContext.SaveChanges();
             }
+            if (!dbContext.LastWorkOnDayMassageDate.Any())
+            {
+                dbContext.LastWorkOnDayMassageDate.Add(new LastWorkOnDayMassageDate
+                {
+                    LastMessageDate = DateTime.Now.AddDays(-1)
+                });
+                dbContext.SaveChanges();
+            }
+            // Run
+            app.Run();
         }
-        // Run
-        app.Run();
-    }
-    static string GetUserIdOrIp(HttpContext context)
-    {
-        string? userId = context.User?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
-        Console.WriteLine(userId);
-        if (!string.IsNullOrEmpty(userId))
-            return userId;
+        static string GetUserIdOrIp(HttpContext context)
+        {
+            string? userId = context.User?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            Console.WriteLine(userId);
+            if (!string.IsNullOrEmpty(userId))
+                return userId;
 
-        return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+            return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+        }
     }
 }

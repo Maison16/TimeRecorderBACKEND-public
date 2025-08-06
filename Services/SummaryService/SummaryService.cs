@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using TimeRecorderBACKEND.DataBaseContext;
 using TimeRecorderBACKEND.Dtos;
 using TimeRecorderBACKEND.Enums;
@@ -26,6 +27,7 @@ namespace TimeRecorderBACKEND.Services
   )
         {
             string cacheKey = $"summary_{userId}_{dateFrom}_{dateTo}_{projectId}";
+            User? user = null;
             return await _cache.GetOrSetAsync(
                 cacheKey,
                 async _ =>
@@ -66,7 +68,10 @@ namespace TimeRecorderBACKEND.Services
                     if (dateTo.HasValue)
                         dayOffQuery = dayOffQuery.Where(x => x.DateEnd <= dateTo.Value.Date);
                     if (userId.HasValue)
+                    {
                         dayOffQuery = dayOffQuery.Where(x => x.UserId == userId.Value);
+                        user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    }
 
                     List<DayOffRequest> requests = await dayOffQuery.ToListAsync();
                     int approvedDaysOff = 0;
@@ -110,7 +115,11 @@ namespace TimeRecorderBACKEND.Services
                         RejectedDaysOff = rejectedDaysOff,
                         PendingDaysOff = pendingDaysOff,
                         CancelledDaysOff = cancelledDaysOff,
-                        ExecutedDaysOff = executedDaysOff
+                        ExecutedDaysOff = executedDaysOff,
+                        UserName = user?.Name,
+                        UserSurname = user?.Surname,
+                        UserEmail = user?.Email,
+                        Date = dateFrom.HasValue ? dateFrom.Value.Date : DateTime.Today
                     };
                 },
                 TimeSpan.FromMinutes(5) 
@@ -130,6 +139,43 @@ namespace TimeRecorderBACKEND.Services
                 result.Add(summary);
             }
             return result;
+        }
+        public async Task<SummaryListDto> GetDailySummariesAsync(DateTime dateFrom, DateTime dateTo, List<Guid>? userIds = null, int? projectId = null)
+        {
+            List<SummaryDto> summaries = new List<SummaryDto>();
+            DateTime current = dateFrom.Date;
+            DateTime end = dateTo.Date;
+            if(userIds == null)
+            {
+                userIds = await _context.Users
+        .Where(u => u.ExistenceStatus == ExistenceStatus.Exist)
+        .Select(u => u.Id)
+        .ToListAsync();
+            }
+            if (projectId != null)
+            {
+                userIds = await _context.Users
+                    .Where(u => userIds.Contains(u.Id) && u.ProjectId == projectId.Value)
+                    .Select(u => u.Id)
+                    .ToListAsync();
+            }
+            if (end > DateTime.Now)
+            {
+                end = DateTime.Now;
+            }
+            foreach (Guid userId in userIds)
+            {
+                while (current <= end)
+                {
+
+                    SummaryDto summary = await GetFullSummaryAsync(current, current, userId, projectId);
+                    summary.Date = current;
+                    summaries.Add(summary);
+                    current = current.AddDays(1);
+                }
+                current = dateFrom.Date;
+            }
+            return new SummaryListDto { Summaries = summaries };
         }
     }
 }

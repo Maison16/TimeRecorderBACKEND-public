@@ -52,7 +52,7 @@ namespace TimeRecorderBACKEND.Services
                 DateTime today = DateTime.Today;
 
                 List<DayOffRequest> requests = await context.DayOffRequests
-                    .Where(r => r.Status == DayOffStatus.Approved || r.Status == DayOffStatus.Pending && r.DateEnd.Date < today)
+                    .Where(r => (r.Status == DayOffStatus.Approved || r.Status == DayOffStatus.Pending) && r.DateEnd.Date < today)
                     .ToListAsync(stoppingToken);
 
                 foreach (DayOffRequest req in requests)

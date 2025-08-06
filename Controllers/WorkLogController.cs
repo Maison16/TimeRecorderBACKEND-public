@@ -88,7 +88,34 @@ namespace TimeRecorderBACKEND.Controllers
         IEnumerable<WorkLogDtoWithUserNameAndSurname> logs = await _workLogService.GetSpecific(userId, type, isClose, isDeleted, startDay, Name, Surname, pageNumber, pageSize);
         return Ok(logs);
         }
-
+        /// <summary>
+        /// Gets filtered work logs for multiple users by their IDs and other filters.
+        /// </summary>
+        /// <param name="userIds">List of user IDs.</param>
+        /// <param name="type">Work log type (optional).</param>
+        /// <param name="isClose">Whether the work log is closed (optional).</param>
+        /// <param name="startDay">Start day filter (optional).</param>
+        /// <param name="isDeleted">Whether the work log is deleted (optional).</param>
+        /// <param name="Name">User's name filter (optional).</param>
+        /// <param name="Surname">User's surname filter (optional).</param>
+        /// <param name="pageNumber">Page number for pagination (optional).</param>
+        /// <param name="pageSize">Page size for pagination (optional).</param>
+        /// <returns>List of filtered work logs with user details.</returns>
+        [HttpPost("filter-multi")]
+        public async Task<ActionResult<IEnumerable<WorkLogDtoWithUserNameAndSurname>>> GetSpecificForUsers(
+            [FromBody] List<Guid> userIds,
+            [FromQuery] WorkLogType? type = null,
+            [FromQuery] bool? isClose = null,
+            [FromQuery] DateTime? startDay = null,
+            [FromQuery] bool? isDeleted = false,
+            [FromQuery] string? Name = null,
+            [FromQuery] string? Surname = null,
+            [FromQuery] int? pageNumber = null,
+            [FromQuery] int? pageSize = null)
+        {
+            IEnumerable<WorkLogDtoWithUserNameAndSurname> logs = await _workLogService.GetSpecificForUsers(userIds, type, isClose, isDeleted, startDay, Name, Surname, pageNumber, pageSize);
+            return Ok(logs);
+        }
         /// <summary>
         /// Starts a work log for a user.
         /// </summary>
@@ -246,6 +273,32 @@ namespace TimeRecorderBACKEND.Controllers
             {
                 return StatusCode(500, new { error = "An unexpected error occurred.", detail = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Confirms a past work log entry by its ID. Only accessible by Admins.
+        /// </summary>
+        /// <param name="id">Work log ID.</param>
+        /// <returns>The confirmed work log if found; otherwise, 404 Not Found.</returns>
+        [HttpPost("confirm-past/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ConfirmPastWorkLog(int id)
+        {
+            WorkLogDto? result = await _workLogService.ConfirmPastWorkLogAsync(id);
+            return result == null ? NotFound() : Ok(result);
+        }
+
+        /// <summary>
+        /// Rejects a past work log entry by its ID. Only accessible by Admins.
+        /// </summary>
+        /// <param name="id">Work log ID.</param>
+        /// <returns>The rejected work log if found; otherwise, 404 Not Found.</returns>
+        [HttpPost("reject-past/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RejectPastWorkLog(int id)
+        {
+            WorkLogDto? result = await _workLogService.RejectPastWorkLogAsync(id);
+            return result == null ? NotFound() : Ok(result);
         }
     }
 }
