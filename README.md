@@ -17,3 +17,6 @@ przed danym dniem. Wszyscy pracownicy wpisując się, mają możliwość swobodn
 z rozpoczęciem, przerwą, bądź zakończeniem pracy. Z pomocą AI interpretujemy treść wpisu
 i wywołujemy odpowiednią akcję w naszym API. Kolejnym wyzwaniem będzie wysyłanie
 powiadomień na teams, do użytkowników, którzy nie rozpoczęli/zakończyli dnia pracy.
+
+Link do prezentacji:
+- https://prezi.com/p/edit/gn-zwc_pd8se/
